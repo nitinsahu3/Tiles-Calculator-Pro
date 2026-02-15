@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pro Tile Calculator</title>
+<style>
+body { font-family: Arial; padding:15px; background:#f2f2f2; }
+.box { background:white; padding:15px; border-radius:10px; box-shadow:0 0 10px rgba(0,0,0,0.1); }
+input, select, button {
+    width:100%; padding:10px; margin:8px 0; font-size:16px;
+}
+button {
+    background:#007bff; color:white; border:none; border-radius:6px;
+}
+.result { margin-top:15px; font-weight:bold; font-size:18px; }
+.secondary { font-size:14px; color:gray; }
+.toggle {
+    margin-top:10px;
+    background:#444;
+}
+.hidden { display:none; }
+.wallRow {
+    display:flex;
+    gap:5px;
+}
+.wallRow input {
+    width:50%;
+}
+</style>
+</head>
+<body>
+
+<div class="box">
+<h3>Pro Tile Rate Calculator</h3>
+
+<label>Tile Length (feet)</label>
+<input type="number" id="length">
+
+<label>Tile Width (feet)</label>
+<input type="number" id="width">
+
+<label>Pricing Type</label>
+<select id="pricingType">
+  <option value="piece">Rate per Piece</option>
+  <option value="box">Rate per Box</option>
+  <option value="sqft">Rate per Square Foot</option>
+</select>
+
+<label>Rate (Rs.)</label>
+<input type="number" id="rate">
+
+<div id="boxField" class="hidden">
+    <label>Tiles per Box</label>
+    <input type="number" id="tilesPerBox">
+</div>
+
+<label>Room Area (optional, sq ft)</label>
+<input type="number" id="roomArea">
+
+<button onclick="calculateBasic()">Calculate Rate</button>
+
+<div class="result" id="mainOutput"></div>
+<div class="secondary" id="secondaryOutput"></div>
+
+<button class="toggle" onclick="toggleDimensions()">Enter Room Dimensions</button>
+
+<div id="dimensionSection" class="hidden">
+
+<h4>Room Wall Dimensions</h4>
+<div id="walls"></div>
+
+<button onclick="addWall()">Add Wall</button>
+
+<label>Wastage %</label>
+<input type="number" id="wastage" value="5">
+
+<button onclick="calculateDimensions()">Calculate From Dimensions</button>
+
+<div class="result" id="dimensionOutput"></div>
+
+</div>
+
+</div>
+
+<script>
+
+let costPerSqFtGlobal = 0;
+let ratePerTileGlobal = 0;
+let areaPerTileGlobal = 0;
+
+document.getElementById("pricingType").addEventListener("change", function() {
+    document.getElementById("boxField").classList.toggle("hidden", this.value !== "box");
+});
+
+function calculateBasic() {
+
+    let length = parseFloat(document.getElementById("length").value);
+    let width = parseFloat(document.getElementById("width").value);
+    let rate = parseFloat(document.getElementById("rate").value);
+    let pricingType = document.getElementById("pricingType").value;
+    let tilesPerBox = parseFloat(document.getElementById("tilesPerBox").value);
+    let roomArea = parseFloat(document.getElementById("roomArea").value);
+
+    if (!length || !width || !rate) {
+        alert("Please fill tile size and rate");
+        return;
+    }
+
+    areaPerTileGlobal = length * width;
+
+    if (pricingType === "piece") {
+        ratePerTileGlobal = rate;
+        costPerSqFtGlobal = rate / areaPerTileGlobal;
+    }
+
+    if (pricingType === "box") {
+        if (!tilesPerBox) { alert("Enter tiles per box"); return; }
+        ratePerTileGlobal = rate / tilesPerBox;
+        costPerSqFtGlobal = ratePerTileGlobal / areaPerTileGlobal;
+    }
+
+    if (pricingType === "sqft") {
+        costPerSqFtGlobal = rate;
+        ratePerTileGlobal = rate * areaPerTileGlobal;
+    }
+
+    let totalCost = roomArea ? roomArea * costPerSqFtGlobal : 0;
+
+    document.getElementById("mainOutput").innerHTML =
+        "Cost per sq ft: Rs. " + costPerSqFtGlobal.toFixed(2);
+
+    document.getElementById("secondaryOutput").innerHTML =
+        "Cost per tile: Rs. " + ratePerTileGlobal.toFixed(2) +
+        "<br>Area per tile: " + areaPerTileGlobal.toFixed(2) + " sq ft" +
+        (totalCost ? "<br><br>Total cost: Rs. " + totalCost.toFixed(2) : "");
+}
+
+function toggleDimensions() {
+    document.getElementById("dimensionSection").classList.toggle("hidden");
+}
+
+function addWall() {
+    let div = document.createElement("div");
+    div.className = "wallRow";
+    div.innerHTML = '<input type="number" placeholder="Length (ft)">' +
+                    '<input type="number" placeholder="Height (ft)">';
+    document.getElementById("walls").appendChild(div);
+}
+
+function calculateDimensions() {
+
+    if (!costPerSqFtGlobal || !areaPerTileGlobal) {
+        alert("First calculate rate above");
+        return;
+    }
+
+    let walls = document.querySelectorAll("#walls .wallRow");
+    let totalArea = 0;
+
+    walls.forEach(wall => {
+        let inputs = wall.querySelectorAll("input");
+        let length = parseFloat(inputs[0].value);
+        let height = parseFloat(inputs[1].value);
+        if (length && height) {
+            totalArea += length * height;
+        }
+    });
+
+    let wastage = parseFloat(document.getElementById("wastage").value) || 0;
+    totalArea = totalArea * (1 + wastage/100);
+
+    let tilesNeeded = Math.ceil(totalArea / areaPerTileGlobal);
+    let totalCost = totalArea * costPerSqFtGlobal;
+
+    document.getElementById("dimensionOutput").innerHTML =
+        "Total Area (with wastage): " + totalArea.toFixed(2) + " sq ft<br>" +
+        "Tiles Required: " + tilesNeeded + "<br>" +
+        "Total Cost: Rs. " + totalCost.toFixed(2);
+}
+
+</script>
+
+</body>
+</html>
