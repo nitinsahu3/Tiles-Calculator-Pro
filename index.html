@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Material Area Cost Estimator</title>
+<title>Professional Material Area Cost Estimator</title>
 
 <style>
 body{
@@ -12,7 +12,7 @@ body{
     padding:20px;
 }
 .container{
-    max-width:720px;
+    max-width:900px;
     margin:auto;
 }
 .card{
@@ -46,45 +46,13 @@ button:hover{
 .result{
     margin-top:12px;
     font-weight:600;
-}
-.toggle-bar{
-    background:#eef1f5;
-    padding:10px 12px;
-    border-radius:8px;
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    cursor:pointer;
     font-size:14px;
-    margin-bottom:10px;
-}
-.toggle-bar:hover{
-    background:#e1e6ed;
-}
-.hidden{display:none;}
-.section-row{
-    display:flex;
-    gap:6px;
-    align-items:center;
-}
-.section-row input{
-    width:40%;
-}
-.remove-btn{
-    width:30px;
-    height:30px;
-    background:#e74c3c;
-    color:#fff;
-    border:none;
-    border-radius:6px;
-    cursor:pointer;
 }
 .history-item{
     background:#eef1f5;
     padding:12px;
     border-radius:8px;
     margin-bottom:8px;
-    font-size:13px;
     display:flex;
     justify-content:space-between;
 }
@@ -111,22 +79,25 @@ button:hover{
 
 <div class="container">
 
+<!-- RATE SECTION -->
 <div class="card">
-<h2>Material Area Cost Estimator</h2>
+<h2>Material Rate Calculation</h2>
 
-<!-- MATERIAL NAME -->
-<div class="toggle-bar" onclick="toggleSection('nameSection')">
-<span>Add Material Name (Optional)</span>
-<span>+</span>
-</div>
-<div id="nameSection" class="hidden">
-<input type="text" id="materialName" placeholder="Example: 8x4 Plywood / 2x4 Vitrified Tile">
-</div>
+<label>Material Name (Optional)</label>
+<input type="text" id="materialName">
 
-<label>Unit Length (ft)</label>
+<label>Material Dimension Unit</label>
+<select id="unitSelect">
+<option value="ft">Feet</option>
+<option value="in">Inches</option>
+<option value="cm">Centimeters</option>
+<option value="mm">Millimeters</option>
+</select>
+
+<label>Unit Length</label>
 <input type="number" id="length">
 
-<label>Unit Width (ft)</label>
+<label>Unit Width</label>
 <input type="number" id="width">
 
 <label>Pricing Type</label>
@@ -139,46 +110,52 @@ button:hover{
 <label>Rate (Rs.)</label>
 <input type="number" id="rate">
 
-<div id="boxField" class="hidden">
+<div id="boxField" style="display:none;">
 <label>Units per Box</label>
 <input type="number" id="unitsPerBox">
 </div>
 
 <button onclick="calculateRate()">Calculate Unit Rate</button>
 <div class="result" id="rateOutput"></div>
-
-<!-- MANUAL AREA ENTRY -->
-<div class="toggle-bar" onclick="toggleSection('manualSection')">
-<span>Enter Total Area / Units</span>
-<span>+</span>
 </div>
-<div id="manualSection" class="hidden">
+
+<!-- MANUAL SECTION -->
+<div class="card">
+<h2>Manual Calculation</h2>
+
 <label>Total Area (sq ft)</label>
 <input type="number" id="manualArea">
 
-<label>OR Total Units Required</label>
+<label>OR Total Units</label>
 <input type="number" id="manualUnits">
+
+<label>OR Total Boxes</label>
+<input type="number" id="manualBoxes">
 
 <button onclick="calculateManual()">Calculate</button>
 <div class="result" id="manualOutput"></div>
 </div>
 
-<!-- AREA SECTIONS -->
-<div class="toggle-bar" onclick="toggleSection('dimensionSection')">
-<span>Area Sections (Room / Wall / Floor)</span>
-<span>+</span>
-</div>
-<div id="dimensionSection" class="hidden">
-<div id="sections"></div>
-<button onclick="addSection()">Add Section</button>
+<!-- LAYOUT SECTION -->
+<div class="card">
+<h2>Layout Analysis</h2>
 
-<label>Wastage %</label>
-<input type="number" id="wastage" value="5">
+<label>Room Dimension Unit</label>
+<select id="layoutUnitSelect">
+<option value="ft">Feet</option>
+<option value="in">Inches</option>
+<option value="cm">Centimeters</option>
+<option value="mm">Millimeters</option>
+</select>
 
-<button onclick="calculateSections()">Calculate</button>
-<div class="result" id="dimensionOutput"></div>
-</div>
+<label>Room Length</label>
+<input type="number" id="roomLength">
 
+<label>Room Width</label>
+<input type="number" id="roomWidth">
+
+<button onclick="calculateLayout()">Analyze Layout</button>
+<div class="result" id="layoutOutput"></div>
 </div>
 
 <!-- HISTORY -->
@@ -194,33 +171,39 @@ button:hover{
 
 let costPerSqFt=0;
 let areaPerUnit=0;
-let currentKey=null;
-
-function toggleSection(id){
-    document.getElementById(id).classList.toggle("hidden");
-}
 
 document.getElementById("pricingType").addEventListener("change",function(){
-    document.getElementById("boxField").classList.toggle("hidden",this.value!=="box");
+    document.getElementById("boxField").style.display=
+        this.value==="box"?"block":"none";
 });
 
-function generateKey(length,width,rate,type,box,name){
-    return `${length}_${width}_${type}_${rate}_${box||0}_${name||""}`;
+function convertToFeet(value, unit){
+    if(!value) return 0;
+    if(unit==="ft") return value;
+    if(unit==="in") return value/12;
+    if(unit==="cm") return value/30.48;
+    if(unit==="mm") return value/304.8;
 }
 
 function calculateRate(){
 
-    let name=document.getElementById("materialName").value.trim();
-    let length=parseFloat(document.getElementById("length").value);
-    let width=parseFloat(document.getElementById("width").value);
+    let unit=document.getElementById("unitSelect").value;
+    let lengthRaw=document.getElementById("length").value;
+    let widthRaw=document.getElementById("width").value;
+
+    let length=convertToFeet(parseFloat(lengthRaw),unit);
+    let width=convertToFeet(parseFloat(widthRaw),unit);
+
     let rate=parseFloat(document.getElementById("rate").value);
     let type=document.getElementById("pricingType").value;
     let unitsPerBox=parseFloat(document.getElementById("unitsPerBox").value)||0;
 
-    if(!length||!width||!rate){alert("Fill required fields");return;}
+    if(!length||!width||!rate){
+        alert("Fill required fields");
+        return;
+    }
 
     areaPerUnit=length*width;
-    currentKey=generateKey(length,width,rate,type,unitsPerBox,name);
 
     let ratePerUnit=0;
 
@@ -228,132 +211,164 @@ function calculateRate(){
         ratePerUnit=rate;
         costPerSqFt=rate/areaPerUnit;
     }
+
     if(type==="box"){
-        if(!unitsPerBox){alert("Enter units per box");return;}
+        if(!unitsPerBox){
+            alert("Enter units per box");
+            return;
+        }
         ratePerUnit=rate/unitsPerBox;
         costPerSqFt=ratePerUnit/areaPerUnit;
     }
+
     if(type==="sqft"){
         costPerSqFt=rate;
         ratePerUnit=rate*areaPerUnit;
     }
 
-    let html=`
-    ${name?'<strong>'+name+'</strong><br>':''}
-    Unit Size: ${length} x ${width} ft<br>
-    Cost per sq ft: Rs. ${costPerSqFt.toFixed(2)}<br>
-    Cost per unit: Rs. ${ratePerUnit.toFixed(2)}
-    `;
+    let html=
+        `Unit Size: ${lengthRaw} × ${widthRaw} ${unit}<br>
+         Unit Area: ${areaPerUnit.toFixed(3)} sq ft<br>
+         Cost per sq ft: Rs. ${costPerSqFt.toFixed(2)}<br>
+         Cost per unit: Rs. ${ratePerUnit.toFixed(2)}`;
 
     document.getElementById("rateOutput").innerHTML=html;
-    saveHistory(currentKey,html,false);
+    saveHistory(html);
 }
 
 function calculateManual(){
 
-    if(!currentKey){alert("Calculate rate first");return;}
+    if(!areaPerUnit || !costPerSqFt){
+        alert("Calculate unit rate first");
+        return;
+    }
 
     let area=parseFloat(document.getElementById("manualArea").value);
     let units=parseFloat(document.getElementById("manualUnits").value);
+    let boxes=parseFloat(document.getElementById("manualBoxes").value);
+    let unitsPerBox=parseFloat(document.getElementById("unitsPerBox").value)||0;
 
-    if(!area && !units){alert("Enter area or units");return;}
-
-    if(area){
-        units=Math.ceil(area/areaPerUnit);
-    } else {
-        area=units*areaPerUnit;
+    if(!area && !units && !boxes){
+        alert("Enter Area, Units, or Boxes");
+        return;
     }
 
-    let totalCost=area*costPerSqFt;
+    if(boxes){
+        if(!unitsPerBox){
+            alert("Enter Units per Box in Rate section");
+            return;
+        }
+        units = boxes * unitsPerBox;
+        area = units * areaPerUnit;
+    }
 
-    let html=`
-    <br><u>Manual Calculation</u><br>
+    if(units && !area){
+        area = units * areaPerUnit;
+        if(unitsPerBox){
+            boxes = Math.ceil(units / unitsPerBox);
+        }
+    }
+
+    if(area && !units){
+        units = Math.ceil(area / areaPerUnit);
+        if(unitsPerBox){
+            boxes = Math.ceil(units / unitsPerBox);
+        }
+    }
+
+    let totalCost = area * costPerSqFt;
+
+    let html = `
     Area: ${area.toFixed(2)} sq ft<br>
     Units Required: ${units}<br>
+    ${unitsPerBox ? `Boxes Required: ${boxes}<br>` : ``}
     Total Cost: Rs. ${totalCost.toFixed(2)}
     `;
 
-    document.getElementById("manualOutput").innerHTML=html;
-    saveHistory(currentKey,html,true);
+    document.getElementById("manualOutput").innerHTML = html;
+    saveHistory(html);
 }
 
-function addSection(){
-    let div=document.createElement("div");
-    div.className="section-row";
-    div.innerHTML=`
-        <input type="number" placeholder="Length (ft)">
-        <input type="number" placeholder="Width (ft)">
-        <button class="remove-btn" onclick="this.parentElement.remove()">&times;</button>
-    `;
-    document.getElementById("sections").appendChild(div);
-}
+function calculateLayout(){
 
-function calculateSections(){
+    let layoutUnit=document.getElementById("layoutUnitSelect").value;
+    let roomLengthRaw=document.getElementById("roomLength").value;
+    let roomWidthRaw=document.getElementById("roomWidth").value;
 
-    if(!currentKey){alert("Calculate rate first");return;}
+    let roomLength=convertToFeet(parseFloat(roomLengthRaw),layoutUnit);
+    let roomWidth=convertToFeet(parseFloat(roomWidthRaw),layoutUnit);
 
-    let sections=document.querySelectorAll(".section-row");
-    if(!sections.length){alert("Add sections");return;}
+    let tileUnit=document.getElementById("unitSelect").value;
+    let tileLength=convertToFeet(parseFloat(document.getElementById("length").value),tileUnit);
+    let tileWidth=convertToFeet(parseFloat(document.getElementById("width").value),tileUnit);
 
-    let totalArea=0;
-
-    sections.forEach(s=>{
-        let inputs=s.querySelectorAll("input");
-        let l=parseFloat(inputs[0].value);
-        let w=parseFloat(inputs[1].value);
-        if(!isNaN(l)&&!isNaN(w)){
-            totalArea+=l*w;
-        }
-    });
-
-    let wastage=parseFloat(document.getElementById("wastage").value)||0;
-    totalArea*=1+(wastage/100);
-
-    let units=Math.ceil(totalArea/areaPerUnit);
-    let totalCost=totalArea*costPerSqFt;
-
-    let html=`
-    <br><u>Section Calculation</u><br>
-    Area (with wastage): ${totalArea.toFixed(2)} sq ft<br>
-    Units Required: ${units}<br>
-    Total Cost: Rs. ${totalCost.toFixed(2)}
-    `;
-
-    document.getElementById("dimensionOutput").innerHTML=html;
-    saveHistory(currentKey,html,true);
-}
-
-function saveHistory(key,data,append){
-
-    let history=JSON.parse(localStorage.getItem("materialHistory")||"{}");
-
-    if(!history[key]){
-        history[key]=data;
-    }else{
-        history[key]+=data;
+    if(!roomLength||!roomWidth||!tileLength||!tileWidth){
+        alert("Enter all dimensions properly");
+        return;
     }
 
+    let areaMethod=Math.ceil((roomLength*roomWidth)/(tileLength*tileWidth));
+
+    let A1=Math.ceil(roomLength/tileLength);
+    let A2=Math.ceil(roomWidth/tileWidth);
+    let totalA=A1*A2;
+
+    let B1=Math.ceil(roomLength/tileWidth);
+    let B2=Math.ceil(roomWidth/tileLength);
+    let totalB=B1*B2;
+
+    let best=Math.min(totalA,totalB);
+    let recommended=Math.max(areaMethod,best);
+
+    let html=
+        `Room Size: ${roomLengthRaw} × ${roomWidthRaw} ${layoutUnit}<br><br>
+         Area Method: ${areaMethod} units<br>
+         Orientation A: ${A1} × ${A2} = ${totalA} units<br>
+         Orientation B: ${B1} × ${B2} = ${totalB} units<br><br>
+         Best Layout: ${best} units<br>
+         Recommended Purchase: ${recommended} units`;
+
+    document.getElementById("layoutOutput").innerHTML=html;
+    saveHistory(html);
+}
+
+function saveHistory(data){
+    let history;
+    try{
+        history=JSON.parse(localStorage.getItem("materialHistory"));
+        if(!Array.isArray(history)) history=[];
+    }catch{
+        history=[];
+    }
+    history.unshift(data);
     localStorage.setItem("materialHistory",JSON.stringify(history));
     loadHistory();
 }
 
 function loadHistory(){
-    let history=JSON.parse(localStorage.getItem("materialHistory")||"{}");
+    let history;
+    try{
+        history=JSON.parse(localStorage.getItem("materialHistory"));
+        if(!Array.isArray(history)) history=[];
+    }catch{
+        history=[];
+    }
+
     let div=document.getElementById("history");
     div.innerHTML="";
 
-    Object.entries(history).forEach(([key,value])=>{
+    history.forEach((item,index)=>{
         let box=document.createElement("div");
         box.className="history-item";
 
         let content=document.createElement("div");
         content.className="history-content";
-        content.innerHTML=value;
+        content.innerHTML=item;
 
         let del=document.createElement("button");
         del.className="delete-btn";
         del.innerHTML="&times;";
-        del.onclick=function(){deleteHistory(key);};
+        del.onclick=function(){deleteHistory(index);};
 
         box.appendChild(content);
         box.appendChild(del);
@@ -361,9 +376,9 @@ function loadHistory(){
     });
 }
 
-function deleteHistory(key){
-    let history=JSON.parse(localStorage.getItem("materialHistory")||"{}");
-    delete history[key];
+function deleteHistory(index){
+    let history=JSON.parse(localStorage.getItem("materialHistory")||"[]");
+    history.splice(index,1);
     localStorage.setItem("materialHistory",JSON.stringify(history));
     loadHistory();
 }
