@@ -3,93 +3,30 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Professional Material Area Cost Estimator</title>
+<title>Professional Material Estimator PRO</title>
 
 <style>
-body{
-    font-family:Segoe UI, Arial;
-    background:#f4f6f9;
-    padding:20px;
-}
-.container{
-    max-width:1000px;
-    margin:auto;
-}
-.card{
-    background:#fff;
-    padding:20px;
-    border-radius:12px;
-    box-shadow:0 6px 18px rgba(0,0,0,0.08);
-    margin-bottom:20px;
-}
-h2{
-    margin-bottom:15px;
-    color:#2c3e50;
-}
+body{font-family:Segoe UI,Arial;background:#f4f6f9;padding:20px;}
+.container{max-width:1100px;margin:auto;}
+.card{background:#fff;padding:20px;border-radius:12px;
+box-shadow:0 6px 18px rgba(0,0,0,0.08);margin-bottom:20px;}
+h2{margin-bottom:15px;color:#2c3e50;}
 input,select,button{
-    width:100%;
-    padding:10px;
-    margin:8px 0;
-    font-size:15px;
-    border-radius:6px;
-    border:1px solid #ddd;
-}
-button{
-    background:#2c3e50;
-    color:#fff;
-    border:none;
-    font-weight:600;
-    cursor:pointer;
-}
-button:hover{
-    background:#1a252f;
-}
-.section-row{
-    display:flex;
-    gap:6px;
-    align-items:center;
-}
-.section-row input{
-    width:40%;
-}
-.remove-btn{
-    width:32px;
-    height:32px;
-    background:#e74c3c;
-    color:#fff;
-    border:none;
-    border-radius:6px;
-    cursor:pointer;
-}
-.result{
-    margin-top:12px;
-    font-weight:600;
-    font-size:14px;
-}
-.history-item{
-    background:#eef1f5;
-    padding:12px;
-    border-radius:8px;
-    margin-bottom:8px;
-    display:flex;
-    justify-content:space-between;
-}
-.history-content{
-    max-width:90%;
-}
-.delete-btn{
-    background:#e74c3c;
-    color:#fff;
-    border:none;
-    border-radius:50%;
-    width:22px;
-    height:22px;
-    font-size:12px;
-    cursor:pointer;
-}
-.small-btn{
-    background:#7f8c8d;
-}
+width:100%;padding:10px;margin:8px 0;font-size:15px;
+border-radius:6px;border:1px solid #ddd;}
+button{background:#2c3e50;color:#fff;border:none;font-weight:600;cursor:pointer;}
+button:hover{background:#1a252f;}
+.section-row{display:flex;gap:6px;align-items:center;}
+.section-row input{width:40%;}
+.remove-btn{width:32px;height:32px;background:#e74c3c;color:#fff;
+border:none;border-radius:6px;cursor:pointer;}
+.result{margin-top:12px;font-weight:600;font-size:14px;}
+.history-item{background:#eef1f5;padding:12px;border-radius:8px;
+margin-bottom:8px;display:flex;justify-content:space-between;}
+.history-content{max-width:90%;}
+.delete-btn{background:#e74c3c;color:#fff;border:none;border-radius:50%;
+width:22px;height:22px;font-size:12px;cursor:pointer;}
+.small-btn{background:#7f8c8d;}
 </style>
 </head>
 
@@ -100,7 +37,7 @@ button:hover{
 <div class="card">
 <h2>Material Rate Calculator</h2>
 
-<label>Material Name (Optional)</label>
+<label>Material Name</label>
 <input type="text" id="materialName">
 
 <label>Dimension Unit</label>
@@ -156,7 +93,7 @@ button:hover{
 <div class="result" id="manualOutput"></div>
 </div>
 
-<!-- ROOM DIMENSIONS -->
+<!-- ROOM SECTION -->
 <div class="card">
 <h2>Room Dimensions</h2>
 
@@ -168,14 +105,36 @@ button:hover{
 <option value="mm">Millimeters</option>
 </select>
 
+<h4>Walls</h4>
 <div id="walls"></div>
 <button onclick="addWall()">Add Wall</button>
+
+<h4>Openings (Doors / Windows)</h4>
+<div id="openings"></div>
+<button onclick="addOpening()">Add Opening</button>
 
 <label>Wastage %</label>
 <input type="number" id="roomWastage" value="5">
 
 <button onclick="calculateRoom()">Calculate Room</button>
 <div class="result" id="roomOutput"></div>
+</div>
+
+<!-- LAYOUT -->
+<div class="card">
+<h2>Layout Optimization</h2>
+
+<label>Room Length</label>
+<input type="number" id="layoutLength">
+
+<label>Room Width</label>
+<input type="number" id="layoutWidth">
+
+<label>Wastage %</label>
+<input type="number" id="layoutWastage" value="5">
+
+<button onclick="calculateLayout()">Optimize Layout</button>
+<div class="result" id="layoutOutput"></div>
 </div>
 
 <!-- HISTORY -->
@@ -193,209 +152,238 @@ let costPerSqFt=0;
 let areaPerPiece=0;
 
 document.getElementById("pricingType").addEventListener("change",function(){
-    document.getElementById("boxField").style.display =
-        this.value==="box"?"block":"none";
+document.getElementById("boxField").style.display=
+this.value==="box"?"block":"none";
 });
 
 function convertToFeet(value,unit){
-    if(isNaN(value)) return NaN;
-    switch(unit){
-        case "ft": return value;
-        case "in": return value/12;
-        case "cm": return value/30.48;
-        case "mm": return value/304.8;
-        default: return NaN;
-    }
+if(isNaN(value)) return NaN;
+switch(unit){
+case "ft": return value;
+case "in": return value/12;
+case "cm": return value/30.48;
+case "mm": return value/304.8;
+default: return NaN;
 }
+}
+
+function sqftToSqm(area){ return area*0.092903; }
 
 /* RATE */
 function calculateRate(){
 
-    let name=document.getElementById("materialName").value||"Material";
-    let unit=document.getElementById("unitSelect").value;
+let unit=document.getElementById("unitSelect").value;
+let l=convertToFeet(parseFloat(document.getElementById("length").value),unit);
+let w=convertToFeet(parseFloat(document.getElementById("width").value),unit);
+let rateVal=parseFloat(document.getElementById("rate").value);
+let type=document.getElementById("pricingType").value;
+let piecesPerBox=parseFloat(document.getElementById("unitsPerBox").value);
 
-    let l=convertToFeet(parseFloat(document.getElementById("length").value),unit);
-    let w=convertToFeet(parseFloat(document.getElementById("width").value),unit);
-    let rate=parseFloat(document.getElementById("rate").value);
-    let type=document.getElementById("pricingType").value;
-    let piecesPerBox=parseFloat(document.getElementById("unitsPerBox").value);
+if(isNaN(l)||isNaN(w)||isNaN(rateVal)){alert("Fill required fields");return;}
 
-    if(isNaN(l)||isNaN(w)||isNaN(rate)){
-        alert("Enter Length, Width and Rate");
-        return;
-    }
+areaPerPiece=l*w;
 
-    areaPerPiece=l*w;
+let ratePerPiece=0;
+let ratePerBox=0;
 
-    let ratePerPiece=0;
-    let ratePerBox=0;
-
-    if(type==="piece"){
-        ratePerPiece=rate;
-        ratePerBox=!isNaN(piecesPerBox)?rate*piecesPerBox:0;
-        costPerSqFt=ratePerPiece/areaPerPiece;
-    }
-
-    if(type==="box"){
-        if(isNaN(piecesPerBox)){
-            alert("Enter Pieces per Box");
-            return;
-        }
-        ratePerBox=rate;
-        ratePerPiece=rate/piecesPerBox;
-        costPerSqFt=ratePerPiece/areaPerPiece;
-    }
-
-    if(type==="sqft"){
-        costPerSqFt=rate;
-        ratePerPiece=rate*areaPerPiece;
-        ratePerBox=!isNaN(piecesPerBox)?ratePerPiece*piecesPerBox:0;
-    }
-
-    let areaPerBox=!isNaN(piecesPerBox)?areaPerPiece*piecesPerBox:0;
-
-    let html=`<strong>${name}</strong><br>
-              Area per Piece: ${areaPerPiece.toFixed(3)} sq ft<br>
-              ${!isNaN(piecesPerBox)?`Area per Box: ${areaPerBox.toFixed(3)} sq ft<br>`:''}
-              Rate per Piece: Rs. ${ratePerPiece.toFixed(2)}<br>
-              ${ratePerBox?`Rate per Box: Rs. ${ratePerBox.toFixed(2)}<br>`:''}
-              Rate per sq ft: Rs. ${costPerSqFt.toFixed(2)}`;
-
-    document.getElementById("rateOutput").innerHTML=html;
-    saveHistory("Rate Calculation",html);
+if(type==="piece"){
+ratePerPiece=rateVal;
+ratePerBox=!isNaN(piecesPerBox)?rateVal*piecesPerBox:0;
+costPerSqFt=ratePerPiece/areaPerPiece;
 }
 
-/* MANUAL ENTRY */
+if(type==="box"){
+if(isNaN(piecesPerBox)){alert("Enter pieces per box");return;}
+ratePerBox=rateVal;
+ratePerPiece=rateVal/piecesPerBox;
+costPerSqFt=ratePerPiece/areaPerPiece;
+}
+
+if(type==="sqft"){
+costPerSqFt=rateVal;
+ratePerPiece=rateVal*areaPerPiece;
+ratePerBox=!isNaN(piecesPerBox)?ratePerPiece*piecesPerBox:0;
+}
+
+let html=`Area per Piece: ${areaPerPiece.toFixed(3)} sq ft (${sqftToSqm(areaPerPiece).toFixed(3)} sq m)<br>
+Rate per Piece: Rs. ${ratePerPiece.toFixed(2)}<br>
+${ratePerBox?`Rate per Box: Rs. ${ratePerBox.toFixed(2)}<br>`:''}
+Rate per sq ft: Rs. ${costPerSqFt.toFixed(2)}`;
+
+document.getElementById("rateOutput").innerHTML=html;
+saveHistory("Rate Calculation",html);
+}
+
+/* MANUAL */
 function calculateManual(){
 
-    if(areaPerPiece===0 || costPerSqFt===0){
-        alert("Calculate rate first");
-        return;
-    }
+if(areaPerPiece===0){alert("Calculate rate first");return;}
 
-    let area=parseFloat(document.getElementById("manualArea").value);
-    let pieces=parseFloat(document.getElementById("manualPieces").value);
-    let boxes=parseFloat(document.getElementById("manualBoxes").value);
-    let cost=parseFloat(document.getElementById("manualCost").value);
-    let piecesPerBox=parseFloat(document.getElementById("unitsPerBox").value);
+let area=parseFloat(document.getElementById("manualArea").value);
+let pieces=parseFloat(document.getElementById("manualPieces").value);
+let boxes=parseFloat(document.getElementById("manualBoxes").value);
+let cost=parseFloat(document.getElementById("manualCost").value);
+let piecesPerBox=parseFloat(document.getElementById("unitsPerBox").value);
 
-    if(isNaN(area)&&isNaN(pieces)&&isNaN(boxes)&&isNaN(cost)){
-        alert("Enter any one value");
-        return;
-    }
+if(isNaN(area)&&isNaN(pieces)&&isNaN(boxes)&&isNaN(cost)){
+alert("Enter any one value");return;}
 
-    if(!isNaN(boxes)){
-        if(isNaN(piecesPerBox)){
-            alert("Enter Pieces per Box");
-            return;
-        }
-        pieces=boxes*piecesPerBox;
-        area=pieces*areaPerPiece;
-        cost=area*costPerSqFt;
-    }
-
-    if(!isNaN(pieces)&&isNaN(area)){
-        area=pieces*areaPerPiece;
-        cost=area*costPerSqFt;
-    }
-
-    if(!isNaN(area)&&isNaN(pieces)){
-        pieces=Math.ceil(area/areaPerPiece);
-        cost=area*costPerSqFt;
-    }
-
-    if(!isNaN(cost)&&isNaN(area)){
-        area=cost/costPerSqFt;
-        pieces=Math.ceil(area/areaPerPiece);
-    }
-
-    let html=`Area: ${area.toFixed(2)} sq ft<br>
-              Pieces: ${pieces}<br>
-              Total Cost: Rs. ${cost.toFixed(2)}`;
-
-    document.getElementById("manualOutput").innerHTML=html;
-    saveHistory("Manual Entry",html);
+if(!isNaN(boxes)){
+if(isNaN(piecesPerBox)){alert("Enter pieces per box");return;}
+pieces=boxes*piecesPerBox;
+area=pieces*areaPerPiece;
+cost=area*costPerSqFt;
 }
 
-/* ROOM */
+if(!isNaN(pieces)&&isNaN(area)){
+area=pieces*areaPerPiece;
+cost=area*costPerSqFt;
+}
+
+if(!isNaN(area)&&isNaN(pieces)){
+pieces=Math.ceil(area/areaPerPiece);
+cost=area*costPerSqFt;
+}
+
+if(!isNaN(cost)&&isNaN(area)){
+area=cost/costPerSqFt;
+pieces=Math.ceil(area/areaPerPiece);
+}
+
+let boxesRequired=!isNaN(piecesPerBox)?Math.ceil(pieces/piecesPerBox):0;
+
+let html=`Area: ${area.toFixed(2)} sq ft (${sqftToSqm(area).toFixed(2)} sq m)<br>
+Pieces Required: ${pieces}<br>
+${!isNaN(piecesPerBox)?`Boxes Required: ${boxesRequired}<br>`:''}
+Total Cost: Rs. ${cost.toFixed(2)}`;
+
+document.getElementById("manualOutput").innerHTML=html;
+saveHistory("Manual Entry",html);
+}
+
+/* WALLS + OPENINGS */
 function addWall(){
-    let div=document.createElement("div");
-    div.className="section-row";
-    div.innerHTML=
-        `<input type="number" placeholder="Length">
-         <input type="number" placeholder="Width">
-         <button class="remove-btn" onclick="this.parentElement.remove()">&times;</button>`;
-    document.getElementById("walls").appendChild(div);
+let div=document.createElement("div");
+div.className="section-row";
+div.innerHTML=`<input type="number" placeholder="Length">
+<input type="number" placeholder="Width">
+<button class="remove-btn" onclick="this.parentElement.remove()">×</button>`;
+document.getElementById("walls").appendChild(div);
+}
+
+function addOpening(){
+let div=document.createElement("div");
+div.className="section-row";
+div.innerHTML=`<input type="number" placeholder="Length">
+<input type="number" placeholder="Width">
+<button class="remove-btn" onclick="this.parentElement.remove()">×</button>`;
+document.getElementById("openings").appendChild(div);
 }
 
 function calculateRoom(){
 
-    if(areaPerPiece===0 || costPerSqFt===0){
-        alert("Calculate rate first");
-        return;
-    }
+if(areaPerPiece===0){alert("Calculate rate first");return;}
 
-    let unit=document.getElementById("roomUnitSelect").value;
-    let totalArea=0;
+let unit=document.getElementById("roomUnitSelect").value;
+let totalArea=0;
+let deduction=0;
 
-    document.querySelectorAll("#walls .section-row").forEach(w=>{
-        let l=convertToFeet(parseFloat(w.children[0].value),unit);
-        let w2=convertToFeet(parseFloat(w.children[1].value),unit);
-        if(!isNaN(l)&&!isNaN(w2)){
-            totalArea+=l*w2;
-        }
-    });
+document.querySelectorAll("#walls .section-row").forEach(w=>{
+let l=convertToFeet(parseFloat(w.children[0].value),unit);
+let w2=convertToFeet(parseFloat(w.children[1].value),unit);
+if(!isNaN(l)&&!isNaN(w2)) totalArea+=l*w2;
+});
 
-    if(totalArea===0){
-        alert("Enter valid dimensions");
-        return;
-    }
+document.querySelectorAll("#openings .section-row").forEach(o=>{
+let l=convertToFeet(parseFloat(o.children[0].value),unit);
+let w2=convertToFeet(parseFloat(o.children[1].value),unit);
+if(!isNaN(l)&&!isNaN(w2)) deduction+=l*w2;
+});
 
-    let wastage=parseFloat(document.getElementById("roomWastage").value)||0;
-    totalArea*=1+(wastage/100);
+totalArea=totalArea-deduction;
+if(totalArea<=0){alert("Invalid area after deduction");return;}
 
-    let piecesRequired=Math.ceil(totalArea/areaPerPiece);
-    let totalCost=totalArea*costPerSqFt;
+let wastage=parseFloat(document.getElementById("roomWastage").value)||0;
+totalArea*=1+(wastage/100);
 
-    let html=`Total Area (with wastage): ${totalArea.toFixed(2)} sq ft<br>
-              Pieces Required: ${piecesRequired}<br>
-              Total Cost: Rs. ${totalCost.toFixed(2)}`;
+let pieces=Math.ceil(totalArea/areaPerPiece);
+let cost=totalArea*costPerSqFt;
 
-    document.getElementById("roomOutput").innerHTML=html;
-    saveHistory("Room Dimensions",html);
+let piecesPerBox=parseFloat(document.getElementById("unitsPerBox").value);
+let boxesRequired=!isNaN(piecesPerBox)?Math.ceil(pieces/piecesPerBox):0;
+
+let html=`Net Area: ${totalArea.toFixed(2)} sq ft (${sqftToSqm(totalArea).toFixed(2)} sq m)<br>
+Pieces Required: ${pieces}<br>
+${!isNaN(piecesPerBox)?`Boxes Required: ${boxesRequired}<br>`:''}
+Total Cost: Rs. ${cost.toFixed(2)}`;
+
+document.getElementById("roomOutput").innerHTML=html;
+saveHistory("Room Calculation",html);
+}
+
+/* LAYOUT */
+function calculateLayout(){
+
+if(areaPerPiece===0){alert("Calculate rate first");return;}
+
+let rl=parseFloat(document.getElementById("layoutLength").value);
+let rw=parseFloat(document.getElementById("layoutWidth").value);
+if(isNaN(rl)||isNaN(rw)){alert("Enter layout dimensions");return;}
+
+let tileL=parseFloat(document.getElementById("length").value);
+let tileW=parseFloat(document.getElementById("width").value);
+let unit=document.getElementById("unitSelect").value;
+
+tileL=convertToFeet(tileL,unit);
+tileW=convertToFeet(tileW,unit);
+
+let A=Math.ceil(rl/tileL)*Math.ceil(rw/tileW);
+let B=Math.ceil(rl/tileW)*Math.ceil(rw/tileL);
+let best=Math.min(A,B);
+
+let wastage=parseFloat(document.getElementById("layoutWastage").value)||0;
+let recommended=Math.ceil(best*(1+wastage/100));
+
+let html=`Orientation A: ${A} pieces<br>
+Orientation B: ${B} pieces<br>
+Best Fit: ${best} pieces<br>
+With Wastage: ${recommended} pieces`;
+
+document.getElementById("layoutOutput").innerHTML=html;
+saveHistory("Layout Optimization",html);
 }
 
 /* HISTORY */
 function saveHistory(title,data){
-    let history=JSON.parse(localStorage.getItem("materialHistory")||"[]");
-    history.unshift(`<strong>${title}</strong><br>${data}`);
-    localStorage.setItem("materialHistory",JSON.stringify(history));
-    loadHistory();
+let history=JSON.parse(localStorage.getItem("materialHistory")||"[]");
+history.unshift(`<strong>${title}</strong><br>${data}`);
+localStorage.setItem("materialHistory",JSON.stringify(history));
+loadHistory();
 }
 
 function loadHistory(){
-    let history=JSON.parse(localStorage.getItem("materialHistory")||"[]");
-    let div=document.getElementById("history");
-    div.innerHTML="";
-    history.forEach((item,i)=>{
-        let box=document.createElement("div");
-        box.className="history-item";
-        box.innerHTML=`<div class="history-content">${item}</div>
-                       <button class="delete-btn" onclick="deleteHistory(${i})">&times;</button>`;
-        div.appendChild(box);
-    });
+let history=JSON.parse(localStorage.getItem("materialHistory")||"[]");
+let historyDiv=document.getElementById("history");
+historyDiv.innerHTML="";
+history.forEach((item,i)=>{
+let box=document.createElement("div");
+box.className="history-item";
+box.innerHTML=`<div class="history-content">${item}</div>
+<button class="delete-btn" onclick="deleteHistory(${i})">×</button>`;
+historyDiv.appendChild(box);
+});
 }
 
 function deleteHistory(i){
-    let history=JSON.parse(localStorage.getItem("materialHistory")||"[]");
-    history.splice(i,1);
-    localStorage.setItem("materialHistory",JSON.stringify(history));
-    loadHistory();
+let history=JSON.parse(localStorage.getItem("materialHistory")||"[]");
+history.splice(i,1);
+localStorage.setItem("materialHistory",JSON.stringify(history));
+loadHistory();
 }
 
 function clearHistory(){
-    localStorage.removeItem("materialHistory");
-    loadHistory();
+localStorage.removeItem("materialHistory");
+loadHistory();
 }
 
 loadHistory();
